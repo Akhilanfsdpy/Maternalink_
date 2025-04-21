@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Send, X, Baby } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,14 +11,22 @@ interface ChatFormProps {
   onSubmit: (e: React.FormEvent) => void;
   showTools: boolean;
   toggleTools: () => void;
+  onVideoCall: () => void;
+  onScanRx: () => void;
+  onViewGrowth: () => void;
+  onViewArticles: () => void;
 }
 
-const ChatForm: React.FC<ChatFormProps> = ({ 
-  input, 
-  setInput, 
-  onSubmit, 
-  showTools, 
-  toggleTools 
+const ChatForm: React.FC<ChatFormProps> = ({
+  input,
+  setInput,
+  onSubmit,
+  showTools,
+  toggleTools,
+  onVideoCall,
+  onScanRx,
+  onViewGrowth,
+  onViewArticles,
 }) => {
   return (
     <form onSubmit={onSubmit} className="p-4 border-t flex items-center space-x-2 bg-white">
@@ -33,7 +40,7 @@ const ChatForm: React.FC<ChatFormProps> = ({
         <span className="sr-only">Show tools</span>
         {showTools ? <X className="h-5 w-5 text-gray-500" /> : <Baby className="h-5 w-5 text-gray-500" />}
       </Button>
-      
+
       <Input
         value={input}
         onChange={(e) => setInput(e.target.value)}
@@ -41,9 +48,9 @@ const ChatForm: React.FC<ChatFormProps> = ({
         className="flex-1 py-2 text-sm"
         autoComplete="off"
       />
-      
+
       <VoiceInteraction onTranscription={(text) => setInput(text)} />
-      
+
       <Button
         type="submit"
         size="icon"

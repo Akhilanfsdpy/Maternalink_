@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Upload, Scan, Check, X, Pill, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,48 +29,67 @@ const PrescriptionScanner: React.FC = () => {
     // Preview the selected image
     const reader = new FileReader();
     reader.onloadend = () => {
-      setImagePreview(reader.result as string);
+      const preview = reader.result as string;
+      setImagePreview(preview);
+      processOCR(preview);
     };
     reader.readAsDataURL(file);
-    
-    // In a real app, this would send the image to an OCR service
-    simulateOCRProcess();
   };
   
-  const simulateOCRProcess = () => {
+  const processOCR = async (imageData: string) => {
     setIsScanning(true);
     setScanProgress(0);
     
-    // Simulate progressive OCR scanning
-    const interval = setInterval(() => {
-      setScanProgress(prev => {
-        const newProgress = prev + 10;
-        if (newProgress >= 100) {
-          clearInterval(interval);
-          
-          // Simulate final OCR results
-          setTimeout(() => {
-            const mockScannedText = "Prescription\n\nPatient: Jane Doe\nDate: 2023-07-15\n\nMedications:\n1. Prenatal Vitamins - 1 tablet daily\n2. Iron Supplement - 25mg twice daily\n3. Calcium Citrate - 500mg with meals";
-            setScannedText(mockScannedText);
-            
-            // Extract medications from the scanned text
-            const mockMedications = [
-              { name: "Prenatal Vitamins", dosage: "1 tablet", frequency: "Daily" },
-              { name: "Iron Supplement", dosage: "25mg", frequency: "Twice daily" },
-              { name: "Calcium Citrate", dosage: "500mg", frequency: "With meals" }
-            ];
-            setScannedMedications(mockMedications);
-            setIsScanning(false);
-            
-            toast({
-              title: "Scan Complete",
-              description: "Prescription successfully scanned and medications identified.",
-            });
-          }, 500);
-        }
-        return newProgress;
+    try {
+      // Start progress animation
+      const progressInterval = setInterval(() => {
+        setScanProgress(prev => {
+          const newProgress = prev + 5;
+          return newProgress < 95 ? newProgress : prev;
+        });
+      }, 200);
+      
+      // Call Flask backend API
+      const response = await fetch('http://localhost:5000/api/scan-prescription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ imageData }),
       });
-    }, 200);
+      
+      // Clear progress interval
+      clearInterval(progressInterval);
+      
+      if (!response.ok) {
+        throw new Error('Failed to process image');
+      }
+      
+      const data = await response.json();
+      
+      // Update state with OCR results
+      setScanProgress(100);
+      setTimeout(() => {
+        setScannedText(data.text);
+        setScannedMedications(data.medications);
+        setIsScanning(false);
+        
+        toast({
+          title: "Scan Complete",
+          description: `Found ${data.medications.length} medications in your prescription.`,
+        });
+      }, 500);
+    } catch (error) {
+      console.error('OCR processing error:', error);
+      setIsScanning(false);
+      setScanProgress(0);
+      
+      toast({
+        title: "Scan Failed",
+        description: "There was an error processing your prescription. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   const handleAddToMedications = () => {
@@ -82,26 +100,69 @@ const PrescriptionScanner: React.FC = () => {
     });
   };
   
-  const startCameraCapture = () => {
-    setUsingCamera(true);
-    // In a real app, this would access the device camera
-    toast({
-      title: "Camera Access",
-      description: "Camera access would be requested here in a production app.",
-    });
+  // Camera handling logic with real capture functionality
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
+  
+  const startCameraCapture = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setCameraStream(stream);
+      setUsingCamera(true);
+      
+      toast({
+        title: "Camera Active",
+        description: "Position your prescription in the frame and take a photo.",
+      });
+    } catch (err) {
+      console.error("Camera access error:", err);
+      toast({
+        title: "Camera Error",
+        description: "Could not access your camera. Please check permissions.",
+        variant: "destructive",
+      });
+    }
   };
   
   const cancelCameraCapture = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
     setUsingCamera(false);
   };
   
   const takePicture = () => {
-    // In a real app, this would capture the image from the camera
-    setUsingCamera(false);
+    if (!videoRef) return;
     
-    // For demo purposes, set a fake camera capture
-    setImagePreview("https://placehold.co/400x300/png");
-    simulateOCRProcess();
+    // Create a canvas to capture the frame
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.videoWidth;
+    canvas.height = videoRef.videoHeight;
+    const ctx = canvas.getContext('2d');
+    
+    if (ctx) {
+      // Draw the current video frame to the canvas
+      ctx.drawImage(videoRef, 0, 0, canvas.width, canvas.height);
+      
+      // Convert the canvas to a data URL and process it
+      const imageData = canvas.toDataURL('image/jpeg');
+      setImagePreview(imageData);
+      processOCR(imageData);
+      
+      // Stop the camera stream
+      cancelCameraCapture();
+    }
+  };
+  
+  // Handle video ref assignment
+  const handleVideoRef = (ref: HTMLVideoElement | null) => {
+    setVideoRef(ref);
+    
+    // Connect the stream to the video element when both are available
+    if (ref && cameraStream) {
+      ref.srcObject = cameraStream;
+    }
   };
   
   return (
@@ -118,11 +179,20 @@ const PrescriptionScanner: React.FC = () => {
       <CardContent className="space-y-6">
         {usingCamera ? (
           <div className="relative">
-            <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
-              <div className="text-white text-center">
-                <Camera className="h-12 w-12 mx-auto mb-2 animate-pulse" />
-                <p>Camera Preview (Simulated)</p>
-              </div>
+            <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center overflow-hidden">
+              {cameraStream ? (
+                <video 
+                  ref={handleVideoRef}
+                  autoPlay 
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="text-white text-center">
+                  <Camera className="h-12 w-12 mx-auto mb-2 animate-pulse" />
+                  <p>Accessing camera...</p>
+                </div>
+              )}
             </div>
             <div className="flex justify-center gap-4 mt-4">
               <Button 
@@ -135,6 +205,7 @@ const PrescriptionScanner: React.FC = () => {
               <Button 
                 onClick={takePicture}
                 className="w-1/3 bg-health-blue"
+                disabled={!cameraStream}
               >
                 <Camera className="mr-2 h-4 w-4" /> Capture
               </Button>

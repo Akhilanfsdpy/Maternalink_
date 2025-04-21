@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Video } from 'lucide-react';
 
@@ -24,7 +23,11 @@ const SuggestedVideos: React.FC<SuggestedVideosProps> = ({ videos }) => {
       </div>
       <div className="divide-y divide-gray-100">
         {videos.map((video) => (
-          <div key={video.id} className="p-3 hover:bg-gray-50 transition-colors cursor-pointer flex items-center gap-3">
+          <div
+            key={video.id}
+            className="p-3 hover:bg-gray-50 transition-colors cursor-pointer flex items-center gap-3"
+            onClick={() => alert(`Playing video: ${video.title}`)}
+          >
             <div className="relative flex-shrink-0">
               <img src={video.thumbnail} alt={video.title} className="w-20 h-12 object-cover rounded" />
               <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1 rounded">

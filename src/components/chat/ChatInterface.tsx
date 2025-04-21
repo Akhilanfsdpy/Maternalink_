@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useChatLogic } from '@/hooks/useChatLogic';
 import ChatMessages from './ChatMessages';
@@ -8,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Maximize2, MessageSquare, Stethoscope, Baby } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import VideoCall from './VideoCall';
 
 const ChatInterface: React.FC = () => {
   const {
@@ -20,14 +20,31 @@ const ChatInterface: React.FC = () => {
     messagesEndRef,
     handleSubmit,
     handleVoiceTranscription,
-    toggleTools
+    toggleTools,
   } = useChatLogic();
 
   const [fullScreen, setFullScreen] = useState(false);
   const [activeTab, setActiveTab] = useState('chat');
+  const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
 
   const toggleFullScreen = () => {
     setFullScreen(!fullScreen);
+  };
+
+  const handleVideoCall = () => setIsVideoCallOpen(true);
+  const handleScanRx = () => {
+    // Placeholder for Scan Rx functionality
+    alert('Scanning prescription... (Feature not fully implemented yet. Use camera to scan Rx.)');
+  };
+  const handleViewGrowth = () => {
+    // Trigger growth-related response
+    setInput('Show me my baby’s growth');
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+  };
+  const handleViewArticles = () => {
+    // Trigger article-related response
+    setInput('Show me newborn care articles');
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
 
   return (
@@ -36,8 +53,8 @@ const ChatInterface: React.FC = () => {
       fullScreen ? "h-[calc(100vh-120px)]" : "h-[600px]"
     )}>
       <div className="flex items-center justify-between px-4 py-2 border-b">
-        <Tabs 
-          defaultValue="chat" 
+        <Tabs
+          defaultValue="chat"
           value={activeTab}
           onValueChange={setActiveTab}
           className="w-full"
@@ -56,23 +73,34 @@ const ChatInterface: React.FC = () => {
               <span className="hidden sm:inline">Newborn Health</span>
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="chat" className="flex-grow flex flex-col">
-            <ChatMessages 
+            <ChatMessages
               messages={messages}
               isTyping={isTyping}
               showAISystem={showAISystem}
               messagesEndRef={messagesEndRef}
             />
-            
-            {showTools && <ToolsPanel />}
-            
-            <ChatForm 
+
+            {showTools && (
+              <ToolsPanel
+                onVideoCall={handleVideoCall}
+                onScanRx={handleScanRx}
+                onViewGrowth={handleViewGrowth}
+                onViewArticles={handleViewArticles}
+              />
+            )}
+
+            <ChatForm
               input={input}
               setInput={setInput}
               onSubmit={handleSubmit}
               showTools={showTools}
               toggleTools={toggleTools}
+              onVideoCall={handleVideoCall}
+              onScanRx={handleScanRx}
+              onViewGrowth={handleViewGrowth}
+              onViewArticles={handleViewArticles}
             />
           </TabsContent>
 
@@ -104,7 +132,6 @@ const ChatInterface: React.FC = () => {
                 Connect with Maternal Health AI
               </Button>
             </div>
-
             <div className="text-center text-sm text-gray-500 mt-4">
               Try asking about "pregnancy nutrition", "managing back pain", or "preparing for labor"
             </div>
@@ -138,22 +165,23 @@ const ChatInterface: React.FC = () => {
                 Connect with Newborn Health AI
               </Button>
             </div>
-
             <div className="text-center text-sm text-gray-500 mt-4">
               Try asking about "baby sleep patterns", "feeding schedule", or "developmental milestones"
             </div>
           </TabsContent>
         </Tabs>
-        
-        <Button 
-          variant="ghost" 
-          size="icon" 
+
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={toggleFullScreen}
           className="ml-2"
         >
           <Maximize2 className="h-4 w-4" />
         </Button>
       </div>
+
+      <VideoCall isOpen={isVideoCallOpen} onClose={() => setIsVideoCallOpen(false)} />
     </div>
   );
 };

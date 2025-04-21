@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Baby, ArrowUp, Calendar, QrCode } from 'lucide-react';
@@ -19,29 +18,26 @@ interface GrowthTrackerProps {
 
 const GrowthTracker: React.FC<GrowthTrackerProps> = ({ data, showFullControls = false }) => {
   const { toast } = useToast();
-  
-  // Format data for chart
+
   const chartData = data.months.map((month, index) => ({
     month: `${month}m`,
     weight: data.weights[index],
-    height: data.heights[index]
+    height: data.heights[index],
   }));
 
   const handleScheduleAppointment = () => {
     toast({
-      title: "Schedule Appointment",
-      description: "Redirecting to appointment scheduling...",
+      title: 'Schedule Appointment',
+      description: 'Redirecting to appointment scheduling...',
     });
-    // In a real app, this would redirect to the appointment page
-    window.location.href = "/newborn-health?tab=appointments";
+    window.location.href = '/newborn-health?tab=appointments';
   };
 
   const handleAddGrowthData = () => {
     toast({
-      title: "Add Growth Data",
-      description: "Opening growth data form...",
+      title: 'Add Growth Data',
+      description: 'Opening growth data form...',
     });
-    // In a real app, this would open the growth data form
   };
 
   return (
@@ -56,13 +52,10 @@ const GrowthTracker: React.FC<GrowthTrackerProps> = ({ data, showFullControls = 
           <span>{data.percentile}th percentile</span>
         </div>
       </div>
-      
+
       <div className="h-40 mb-3">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={chartData}
-            margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
-          >
+          <LineChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="month" tick={{ fontSize: 10 }} />
             <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
@@ -78,12 +71,12 @@ const GrowthTracker: React.FC<GrowthTrackerProps> = ({ data, showFullControls = 
           </LineChart>
         </ResponsiveContainer>
       </div>
-      
+
       <div className="flex items-center justify-between text-xs text-gray-500 border-t border-gray-100 pt-2">
         <div>From {data.months[0]} to {data.months[data.months.length - 1]} months</div>
         <div>Weight: {data.weights[0]} kg → {data.weights[data.weights.length - 1]} kg</div>
       </div>
-      
+
       {showFullControls && (
         <div className="mt-4 flex flex-wrap gap-2">
           <Button size="sm" variant="outline" className="text-xs flex items-center" onClick={handleScheduleAppointment}>
