@@ -4,10 +4,12 @@ import ChatMessages from './ChatMessages';
 import ToolsPanel from './ToolsPanel';
 import ChatForm from './ChatForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Maximize2, MessageSquare, Stethoscope, Baby } from 'lucide-react';
+import { Maximize2, MessageSquare, Stethoscope, Baby, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import VideoCall from './VideoCall';
+import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
 
 const ChatInterface: React.FC = () => {
   const {
@@ -23,6 +25,7 @@ const ChatInterface: React.FC = () => {
     toggleTools,
   } = useChatLogic();
 
+  const { toast } = useToast();
   const [fullScreen, setFullScreen] = useState(false);
   const [activeTab, setActiveTab] = useState('chat');
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
@@ -32,17 +35,62 @@ const ChatInterface: React.FC = () => {
   };
 
   const handleVideoCall = () => setIsVideoCallOpen(true);
-  const handleScanRx = () => {
-    // Placeholder for Scan Rx functionality
-    alert('Scanning prescription... (Feature not fully implemented yet. Use camera to scan Rx.)');
+  const handleScanRx = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/scan-prescription', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (response.data.success) {
+        const medications = response.data.medications;
+        const botMessage: Message = {
+          id: messages.length + 1,
+          text: "I've scanned your prescription. Here are the details:",
+          isUser: false,
+          attachments: [{
+            type: 'prescription',
+            data: {
+              medications: medications.map((med: any) => ({
+                name: med.name,
+                dosage: med.dosage,
+                frequency: med.frequency,
+                startDate: '2025-05-01',
+              })),
+              doctor: 'Dr. Sarah Johnson',
+              issueDate: '2025-05-01',
+              notes: 'Take with food to minimize stomach upset.',
+            },
+          }],
+        };
+        setMessages((prev) => [...prev, botMessage]);
+        toast({
+          title: "Prescription Scanned",
+          description: "Prescription details have been added to your chat.",
+        });
+      } else {
+        throw new Error(response.data.error || 'Failed to scan prescription');
+      }
+    } catch (error) {
+      toast({
+        title: "Error Scanning Prescription",
+        description: "Failed to scan the prescription. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
+
   const handleViewGrowth = () => {
-    // Trigger growth-related response
     setInput('Show me my baby’s growth');
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
+
   const handleViewArticles = () => {
-    // Trigger article-related response
     setInput('Show me newborn care articles');
     handleSubmit({ preventDefault: () => {} } as React.FormEvent);
   };
@@ -85,11 +133,19 @@ const ChatInterface: React.FC = () => {
             {showTools && (
               <ToolsPanel
                 onVideoCall={handleVideoCall}
-                onScanRx={handleScanRx}
+                onScanRx={() => document.getElementById('scan-rx-input')?.click()}
                 onViewGrowth={handleViewGrowth}
                 onViewArticles={handleViewArticles}
               />
             )}
+
+            <input
+              type="file"
+              id="scan-rx-input"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleScanRx}
+            />
 
             <ChatForm
               input={input}
@@ -98,7 +154,7 @@ const ChatInterface: React.FC = () => {
               showTools={showTools}
               toggleTools={toggleTools}
               onVideoCall={handleVideoCall}
-              onScanRx={handleScanRx}
+              onScanRx={() => document.getElementById('scan-rx-input')?.click()}
               onViewGrowth={handleViewGrowth}
               onViewArticles={handleViewArticles}
             />
